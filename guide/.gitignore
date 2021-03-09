@@ -1,0 +1,11 @@
+# Hugo
+public/
+resources/
+
+# Editor nonsense
+*.swp
+*.swo
+
+# Random OS things
+Thumbs.db
+.DS_Store
