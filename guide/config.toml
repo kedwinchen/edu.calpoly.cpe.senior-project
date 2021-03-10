@@ -1,4 +1,4 @@
-baseURL = "https://cpslo.kedwin.chen.network/senior-project/guide"
+baseURL = "/senior-project/guide/"
 languageCode = "en-us"
 title = "Senior Project Write-Up"
-theme = "book"
+theme = "geekdoc"
