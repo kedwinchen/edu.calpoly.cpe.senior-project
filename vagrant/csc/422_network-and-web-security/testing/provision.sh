@@ -42,11 +42,20 @@ fi
 ################################################################################
 # Provisioner part
 
+# Ensure packages are up to date
 apt-get update
 apt-get upgrade -y
 
-apt-get install -y wireshark python3 python3-pip
+# Install wireshark noninteractively
+debconf-set-selections <<- _EOF_
+wireshark-common wireshark-common/install-setuid boolean true
+_EOF_
+DEBIAN_FRONTEND=noninteractive apt-get install -y wireshark
+# allow `vagrant` user to capture packets without elevating to root
+usermod -aG wireshark vagrant
 
+# Install python
+apt-get install -y python3 python3-pip
 python3 -m pip install --pre scapy[complete]
 
 cd /tmp/

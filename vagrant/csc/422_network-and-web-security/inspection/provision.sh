@@ -45,4 +45,11 @@ fi
 apt-get update
 apt-get upgrade -y
 
-apt-get install -y snort iptables
+# Install `snort` without interaction
+# NOTE (TODO): MAY need to update the interface in snort/interface!!
+# To answer the questions `snort` asks
+debconf-set-selections <<- _EOF_
+snort snort/interface string enp0s3
+snort snort/address_range string 192.168.0.0/16
+_EOF_
+DEBIAN_FRONTEND=noninteractive apt-get install -y snort iptables
