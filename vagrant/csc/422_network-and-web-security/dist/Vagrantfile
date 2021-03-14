@@ -1,38 +1,72 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-baseurl = "https://cpslo-kedwin.chen.network/senior-project/files"
+# cpslo-kedwin.chen.network is hosted at home, max download speed of ~2.8 MiB/s
+# baseurl = "https://cpslo-kedwin.chen.network/senior-project/files"
+# vagrant-kedwin.chen.network is in Oracle Cloud Infrastructure, max download speed of ~5.1 MiB/s
+baseurl = "https://vagrant-kedwin.chen.network/senior-project/files"
 courseurl = "#{baseurl}/2021-spring/csc/422"
+# Vagrant Cloud is hosted in AWS S3, max download speed of ~33 MiB/s
 
 Vagrant.configure("2") do |config|
+    # Global options
+    # enable ssh X11 forwarding (for graphical applications)
+    config.ssh.forward_x11 = true
+
     config.vm.define "testing" do |testing|
-        testing.vm.box = "testing"
-        testing.vm.hostname = " testing"
-        testing.vm.url = "#{courseurl}/testing.box"
+        testing.vm.box = "csc422/testing"
+        testing.vm.hostname = "testing"
+        testing.vm.box_url = "#{courseurl}/testing/metadata.json"
+        testing.vm.box_version = "20210314.0.1"
 
         testing.vm.network :private_network, ip: "192.168.22.101"
     end
 
     config.vm.define "inspection" do |inspection|
-        inspection.vm.box = "inspection"
+        inspection.vm.box = "csc422/inspection"
         inspection.vm.hostname = "inspection"
-        inspection.vm.url = "#{courseurl}/inspection.box"
+        inspection.vm.url = "#{courseurl}/inspection/metadata.json"
+        inspection.vm.box_version = "20210314.0.1"
 
         inspection.vm.network :private_network, ip: "192.168.22.102"
     end
 
     config.vm.define "metasploitable" do |metasploitable|
-        metasploitable.vm.box = "metasploitable"
         metasploitable.vm.hostname = "metasploitable"
-        metasploitable.vm.url = "#{courseurl}/metasploitable.box"
+        # Instead of building our own VM, use the latest version provided pre-built Rapid7
+        # metasploitable.vm.box = "metasploitable"
+        # metasploitable.vm.url = "#{courseurl}/metasploitable.box"
+        metasploitable.vm.box = "rapid7/metasploitable3-ub1404"
+        metasploitable.vm.box_version = "0.1.12-weekly"
 
         metasploitable.vm.network :private_network, ip: "192.168.22.103"
+
+        # ----------------------- VM SPECIFIC OVERRIDES -----------------------
+        # Since the VM does not have the [correct] insecure Vagrant public key pre-installed,
+        # provide the password here in plain text. This is used ONLY for initial setup; since
+        # Vagrant will insert a new private key to use key-based authentication after first setup
+        metasploitable.ssh.username = "vagrant"
+        metasploitable.ssh.password = "vagrant"
+        metasploitable.ssh.insert_key = true
+        # disable shared folder on vulnerable VM (though make it read-only if mounted)
+        # however, this feature is not supported in the default rapid7/metasploitable3-ub1404
+        # VM since no VirtualBox Guest Additions are installed
+        metasploitable.vm.synced_folder ".", "/vagrant", mount_options: ["ro"], disabled: true
+        # -------------------- END OF VM SPECIFIC OVERRIDES --------------------
     end
 
     config.vm.define "client" do |client|
         client.vm.hostname = "client"
-        client.vm.box_url = "#{baseurl}/base/lubuntu-20.04-amd64-virtualbox.box"
-        client.vm.box = "lubuntu-20.04-amd64-virtualbox"
+        # This is used when adding it directly
+        # client.vm.box = "lubuntu-20.04-amd64-virtualbox"
+        # Using this, without box_url, defaults to pull from Vagrant cloud (which is also faster)
+        client.vm.box = "kedwinchen/lubuntu-2004"
+        # Adding this directly works, but results in version being zero (0)
+        # client.vm.box_url = "#{baseurl}/base/lubuntu/20.04/lubuntu-20.04-amd64-virtualbox.box"
+        # Adding using metadata allows setting a version
+        # client.vm.box_url = "#{baseurl}/base/lubuntu/20.04/metadata.json"
+        # Omitting a box_version always uses the latest version
+        # client.vm.box_version = "0.0.1"
 
         client.vm.network :private_network, ip: "192.168.22.104"
     end
