@@ -1,0 +1,3 @@
+[submodule "guide"]
+	path = guide
+	url = git@gitlab.com:kedwinchen/edu.calpoly.cpe.senior-project.guide
