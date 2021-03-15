@@ -6,4 +6,6 @@ draft: true
 
 Students should follow the [instructions for students](students).
 
-Instructors should follow the [instructions for instructors](instructors)
+Instructors should follow [instructions for instructors] (work in progress).
+
+Image builders should follow the [instructions for builders](image-builders)

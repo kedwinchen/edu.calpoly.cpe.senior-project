@@ -5,9 +5,7 @@ draft: false
 ---
 
 0. If you really need to build the Box from scratch, follow this guide.
-   Otherwise, use the pre-built box from here (also built using these instructions):
-   [https://cpslo-kedwin.chen.network/senior-project/files/base/lubuntu-20.04-amd64-virtualbox.box](https://cpslo-kedwin.chen.network/senior-project/files/base/lubuntu-20.04-amd64-virtualbox.box)
-1. Follow the [Common Steps](../common), to install the required software.
+   Otherwise, use the pre-built box from here (also built using these instructions): [https://app.vagrantup.com/kedwinchen/boxes/lubuntu-2004](https://app.vagrantup.com/kedwinchen/boxes/lubuntu-2004)
 2. Obtain a copy of the Lubuntu install disc from here:
    [https://cdimage.ubuntu.com/lubuntu/releases/](https://cdimage.ubuntu.com/lubuntu/releases/).
 3. Create a new Virtual Machine (hereinafter: "VM"). Suggested specs:
