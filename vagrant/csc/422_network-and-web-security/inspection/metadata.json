@@ -1,0 +1,17 @@
+{
+    "name": "csc422/inspection",
+    "description": "The box for inspection",
+    "versions": [
+        {
+            "version": "20210314.0.1",
+            "providers": [
+                {
+                    "name": "virtualbox",
+                    "url": "https://cpslo-kedwin.chen.network/senior-project/files/2021-spring/csc/422/inspection/inspection-amd64-virtualbox-20210314.0.1.box",
+                    "checksum_type": "sha512",
+                    "checksum": "a137326f47e916cd24628a96161a0156e9c4d41c7d51b517a2ff1c18c017f2635a5f3d92a8df67fe728da642ca6b6e71239891b2b12c47a5ab4e01681eadc6a4"
+                }
+            ]
+        }
+    ]
+}

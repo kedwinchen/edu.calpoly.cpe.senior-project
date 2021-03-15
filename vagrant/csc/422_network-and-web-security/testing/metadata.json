@@ -1,0 +1,17 @@
+{
+    "name": "csc422/testing",
+    "description": "The box for testing",
+    "versions": [
+        {
+            "version": "20210314.0.1",
+            "providers": [
+                {
+                    "name": "virtualbox",
+                    "url": "https://cpslo-kedwin.chen.network/senior-project/files/2021-spring/csc/422/testing/testing-amd64-virtualbox-20210314.0.1.box",
+                    "checksum_type": "sha512",
+                    "checksum": "201bfcf6427500100a802ce226e98c0fe20b745377dc928bb57d73c36452bce8d87a6bbddae7d0338bd160728b9eb8db7094f05341e0c352b40cec5c92b32b13"
+                }
+            ]
+        }
+    ]
+}
