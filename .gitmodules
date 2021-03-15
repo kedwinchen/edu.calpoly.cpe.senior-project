@@ -1,6 +1,0 @@
-[submodule "guide/themes/book"]
-	path = guide/themes/book
-	url = https://github.com/alex-shpak/hugo-book
-[submodule "guide/themes/geekdoc"]
-	path = guide/themes/geekdoc
-	url = https://github.com/thegeeklab/hugo-geekdoc.git
