@@ -50,6 +50,6 @@ apt-get upgrade -y
 # To answer the questions `snort` asks
 debconf-set-selections <<- _EOF_
 snort snort/interface string enp0s3
-snort snort/address_range string 192.168.0.0/16
+snort snort/address_range string 192.168.22.0/24
 _EOF_
 DEBIAN_FRONTEND=noninteractive apt-get install -y snort iptables
