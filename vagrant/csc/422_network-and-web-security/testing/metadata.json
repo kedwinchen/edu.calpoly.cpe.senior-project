@@ -3,6 +3,17 @@
     "description": "The box for testing",
     "versions": [
         {
+            "version": "20210315.0.1",
+            "providers": [
+                {
+                    "name": "virtualbox",
+                    "url": "https://cpslo-kedwin.chen.network/senior-project/files/2021-spring/csc/422/testing/testing-amd64-virtualbox-20210315.0.1.box",
+                    "checksum_type": "sha512",
+                    "checksum": "880545db870960160a0e55abd479b62a61d73d74d871824bb49e5cc6cec116e8d598a9a958841e133ebb0153ca75b17388a0f3914afe5a902ef4f19d5d667638"
+                }
+            ]
+        },
+        {
             "version": "20210314.0.1",
             "providers": [
                 {

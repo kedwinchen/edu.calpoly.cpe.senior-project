@@ -54,9 +54,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y wireshark
 # allow `vagrant` user to capture packets without elevating to root
 usermod -aG wireshark vagrant
 
-# Install python
+# Install python (and scapy)
 apt-get install -y python3 python3-pip
-python3 -m pip install --pre scapy[complete]
+python3 -m pip --no-cache-dir install --pre scapy[complete]
 
 cd /tmp/
 mkdir mitmproxy
@@ -66,3 +66,19 @@ tar xzvf mitmproxy-6.0.2-linux.tar.gz
 install mitmdump /usr/local/bin/
 install mitmproxy /usr/local/bin/
 install mitmweb /usr/local/bin/
+
+# Install nmap
+apt-get install -y nmap
+
+# Install Metasploit Community Edition (Nightly Installer)
+# https://github.com/rapid7/metasploit-framework/wiki/Nightly-Installers
+cd /tmp/
+curl https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb > msfinstall && \
+  chmod 755 msfinstall && \
+  ./msfinstall
+
+# Clean up the cache
+apt-get clean
+
+# disable firewall (for metasploit)
+ufw disable
