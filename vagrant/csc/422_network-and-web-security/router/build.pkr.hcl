@@ -8,7 +8,7 @@ source "vagrant" "lubuntu" {
 }
 
 build {
-  name = "csc-422-inspection"
+  name = "csc-422-router"
 
   sources = [ "source.vagrant.lubuntu" ]
 
