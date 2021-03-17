@@ -9,18 +9,25 @@ courseurl = "#{baseurl}/2021-spring/csc/422"
 # Vagrant Cloud is hosted in AWS S3, max download speed of ~33 MiB/s
 
 Vagrant.configure("2") do |config|
-    # Global options
+    # ----------------------- BEGIN GLOBAL CONFIGURATION -----------------------
     # enable ssh X11 forwarding (for graphical applications)
     config.ssh.forward_x11 = true
     config.vm.provider "virtualbox" do |vbox|
+        # Enable "promiscuous mode" on "private network" (`hostnonly`) adapters
+        vbox.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
         # uncomment to start the GUI on `vagrant up` (headless mode by default)
         # vbox.gui = true
-
         # Recommended memory is 2048 (2 GiB) per VM (comment out to use default value)
         vbox.memory = 1024
         # Recommended 2 cpu per VM (comment out to use default value)
         vbox.cpus = 1
     end
+
+    config.vm.provision "shell",
+        path: "#{courseurl}/configure_networking.sh",
+        sha512: "0877dcc8514cbb7416a2b36539548fb39c7082e9a6e00cd4b27cf496a96d28592949d712c834f69d9a935bdc5e2994ccb24a41df7031ee32acd1e8db6547c7f0",
+        run: "always"
+    # ------------------------ END GLOBAL CONFIGURATION ------------------------
 
     config.vm.define "router" do |router|
         router.vm.box = "csc422/router"
