@@ -43,6 +43,8 @@ fi
 
 IFS=$'\n'
 
+readonly CURRENT_HOSTNAME="$(hostname -s)"
+readonly ROUTER_HOSTNAME="router"
 readonly ROUTER_IP="192.168.22.101"
 readonly LOCAL_NETWORK="192.168.22.0/24"
 readonly CURRENT_ROUTES="$(ip route)"
@@ -57,30 +59,34 @@ for route in ${CURRENT_ROUTES[@]}; do
         CURRENT_DEFAULT_ROUTE=$(printf '%s' ${route} | grep -iEs -- ${REGEX_DEFAULT_ROUTE} - )
     fi
     if [[ "z" == "z${CURRENT_LOCAL_ROUTE}" ]] ; then
-        printf "route = %s\n" "${route}"
-        printf '%s' ${route} | grep -iEs -- ${REGEX_LOCAL_NETWORK} -
         CURRENT_LOCAL_ROUTE=$(printf '%s' ${route} | grep -iEs -- ${REGEX_LOCAL_NETWORK} - )
     fi
 done
 set -e  # Make errors fatal
 
-printf 'CURRENT_DEFROUTE = %s\n' "${CURRENT_DEFAULT_ROUTE}"
-printf 'CURRENT_LOCROUTE = %s\n' "${CURRENT_LOCAL_ROUTE}"
-# Prints the device name
-# python3 -c "import os; t=os.environ.get('LOCAL_ROUTE').split(' '); print(t[t.index('dev')+1].strip())")
+# Prints the device name given a string from the output of `ip route`
 readonly PYTHON_GET_DEV_CMD="import os; t=os.environ.get('TO_PARSE').split(' '); print(t[t.index('dev')+1].strip())"
 readonly CURRENT_DEFAULT_ROUTE_DEV="$(export TO_PARSE=\"${CURRENT_DEFAULT_ROUTE}\"; python3 -c ${PYTHON_GET_DEV_CMD})"
 readonly NEW_DEFAULT_ROUTE_DEV="$(export TO_PARSE=\"${CURRENT_LOCAL_ROUTE}\"; python3 -c ${PYTHON_GET_DEV_CMD})"
 readonly NEW_DEFAULT_ROUTE="default via ${ROUTER_IP} dev ${NEW_DEFAULT_ROUTE_DEV}"
 
 # Enable promiscuous mode on the NIC connected to the internal network (OS side)
+printf 'Enabling promiscuous mode on network adapter: %s\n' "${NEW_DEFAULT_ROUTE_DEV}"
 ip link set "${NEW_DEFAULT_ROUTE_DEV}" promisc on
 
 # Disable traffic routing through NAT interface if not the router
-if ! (printf '%s' ${CURRENT_ROUTES} | grep -qs -- "${ROUTER_IP}" -) ; then
-    printf 'Deleting the current default route: %s\n' "${CURRENT_DEFAULT_ROUTE}"
-    ip route delete default
-    printf 'Adding the new default route: %s\n' "${NEW_DEFAULT_ROUTE}"
-    ip route add default via "${ROUTER_IP}" dev "${NEW_DEFAULT_ROUTE_DEV}"
+if [[ "z${ROUTER_HOSTNAME}" != "z${CURRENT_HOSTNAME}" ]] ; then
+    if !(printf '%s' ${CURRENT_DEFAULT_ROUTE} | grep -qs -- "${ROUTER_IP}" -) ; then
+        printf 'Deleting the current default route: %s\n' "${CURRENT_DEFAULT_ROUTE}"
+        ip route delete default
+        printf 'Adding the new default route: %s\n' "${NEW_DEFAULT_ROUTE}"
+        ip route add default via "${ROUTER_IP}" dev "${NEW_DEFAULT_ROUTE_DEV}"
+    else
+        printf 'Not manipulating static routes; default route appears to be OK: %s\n' "${CURRENT_DEFAULT_ROUTE}"
+    fi
+else
+    printf 'Not manipulating static routes; this is the router VM (hostname = %s)\n' "${CURRENT_HOSTNAME}"
 fi
-set +x
+
+printf 'Network configuration complete\n'
+exit 0
