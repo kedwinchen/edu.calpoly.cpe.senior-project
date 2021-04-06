@@ -1,12 +1,10 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-# cpslo-kedwin.chen.network is hosted at home, max download speed of ~2.8 MiB/s
-# baseurl = "https://cpslo-kedwin.chen.network/senior-project/files"
-# vagrant-kedwin.chen.network is in Oracle Cloud Infrastructure, max download speed of ~5.1 MiB/s
-baseurl = "https://vagrant-kedwin.chen.network/senior-project/files"
+# vagrant-kedwin.chen.network has a max download speed of ~5.1 MiB/s (on 300Mbps connection, limit is on hosting provider)
+baseurl = "https://vagrant-kedwin.chen.network/"
 courseurl = "#{baseurl}/2021-spring/csc/422"
-# Vagrant Cloud is hosted in AWS S3, max download speed of ~33 MiB/s
+# Vagrant Cloud is hosted in AWS S3, max download speed of ~33 MiB/s (on 300Mbps connection)
 
 Vagrant.configure("2") do |config|
     # ----------------------- BEGIN GLOBAL CONFIGURATION -----------------------
@@ -25,7 +23,7 @@ Vagrant.configure("2") do |config|
 
     config.vm.provision "shell",
         path: "#{courseurl}/configure_networking.sh",
-        sha512: "0877dcc8514cbb7416a2b36539548fb39c7082e9a6e00cd4b27cf496a96d28592949d712c834f69d9a935bdc5e2994ccb24a41df7031ee32acd1e8db6547c7f0",
+        sha512: "e1203ba407d37b70faad7f0c2ba5def55643f05fbb7b4402c542e3a6a8b837824012b2997fa0ead5696cd068ca20a1f8cb2978de846f8eb7ef37ce0d635bd7d1",
         run: "always"
     # ------------------------ END GLOBAL CONFIGURATION ------------------------
 
@@ -45,6 +43,11 @@ Vagrant.configure("2") do |config|
         testing.vm.box_version = "20210315.0.1"
 
         testing.vm.network :private_network, ip: "192.168.22.102"
+        testing.vm.network :private_network, ip: "192.168.23.102"
+
+        testing.vm.provider "virtualbox" do |testing_vbox|
+            testing_vbox.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
+        end
     end
 
     config.vm.define "metasploitable" do |metasploitable|
@@ -55,7 +58,7 @@ Vagrant.configure("2") do |config|
         metasploitable.vm.box = "rapid7/metasploitable3-ub1404"
         metasploitable.vm.box_version = "0.1.12-weekly"
 
-        metasploitable.vm.network :private_network, ip: "192.168.22.103"
+        metasploitable.vm.network :private_network, ip: "192.168.23.103"
 
         # ----------------------- VM SPECIFIC OVERRIDES -----------------------
         # Since the VM does not have the [correct] insecure Vagrant public key pre-installed,
@@ -78,17 +81,10 @@ Vagrant.configure("2") do |config|
 
     config.vm.define "client" do |client|
         client.vm.hostname = "client"
-        # This is used when adding it directly
-        # client.vm.box = "lubuntu-20.04-amd64-virtualbox"
-        # Using this, without box_url, defaults to pull from Vagrant cloud (which is also faster)
         client.vm.box = "kedwinchen/lubuntu-2004"
-        # Adding this directly works, but results in version being zero (0)
-        # client.vm.box_url = "#{baseurl}/base/lubuntu/20.04/lubuntu-20.04-amd64-virtualbox.box"
-        # Adding using metadata allows setting a version
-        # client.vm.box_url = "#{baseurl}/base/lubuntu/20.04/metadata.json"
         # Omitting a box_version always uses the latest version
         # client.vm.box_version = "0.0.1"
 
-        client.vm.network :private_network, ip: "192.168.22.104"
+        client.vm.network :private_network, ip: "192.168.23.104"
     end
 end
