@@ -2,16 +2,18 @@
 # vi: set ft=ruby :
 
 # vagrant-kedwin.chen.network has a max download speed of ~5.1 MiB/s (on 300Mbps connection, limit is on hosting provider)
-baseurl = "https://vagrant-kedwin.chen.network/"
+baseurl = "https://vagrant-kedwin.chen.network"
 courseurl = "#{baseurl}/2021-spring/csc/422"
 # Vagrant Cloud is hosted in AWS S3, max download speed of ~33 MiB/s (on 300Mbps connection)
+
+ENV["VAGRANT_DEFAULT_PROVIDER"] = "virtualbox"
 
 Vagrant.configure("2") do |config|
     # ----------------------- BEGIN GLOBAL CONFIGURATION -----------------------
     # enable ssh X11 forwarding (for graphical applications)
     config.ssh.forward_x11 = true
     config.vm.provider "virtualbox" do |vbox|
-        # Enable "promiscuous mode" on "private network" (`hostnonly`) adapters
+        # Enable "promiscuous mode" on "private network" (`hostonly`) adapters
         vbox.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
         # uncomment to start the GUI on `vagrant up` (headless mode by default)
         # vbox.gui = true
@@ -45,9 +47,12 @@ Vagrant.configure("2") do |config|
         testing.vm.network :private_network, ip: "192.168.22.102"
         testing.vm.network :private_network, ip: "192.168.23.102"
 
+        # ----------------------- VM SPECIFIC OVERRIDES -----------------------
+        # Also enable promiscuous mode on the other NIC
         testing.vm.provider "virtualbox" do |testing_vbox|
             testing_vbox.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
         end
+        # -------------------- END OF VM SPECIFIC OVERRIDES --------------------
     end
 
     config.vm.define "metasploitable" do |metasploitable|
