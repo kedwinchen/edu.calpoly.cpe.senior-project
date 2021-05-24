@@ -23,15 +23,15 @@ func getCredentials() (username string, password string, err error) {
     fmt.Print("Please enter your Cal Poly username (without the @calpoly.edu): ")
     username, err = reader.ReadString('\n')
     if nil != err {
-        // log.Fatal(err)
-        return "", "", err
+        log.Println("error while reading username")
+        log.Fatal(err)
     }
 
     fmt.Print("Please enter your Cal Poly password: ")
     passwordBytes, err := terminal.ReadPassword(int(syscall.Stdin))
     if nil != err {
-        // log.Fatal(err)
-        return "", "", err
+        log.Println("error while reading password")
+        log.Fatal(err)
     }
     password = string(passwordBytes)
 
@@ -59,8 +59,9 @@ func connectToVPN(username string, password string) (process *os.Process, err er
         log.Fatal(err)
     }
 
-    log.Println("VPN connection initiated, waiting 3 seconds for it to become active")
-    time.Sleep(3 * time.Second)
+    // TODO: determine how to use a variable here
+    log.Printf("VPN connection initiated, waiting 1 second(s) for it to become active")
+    time.Sleep(1 * time.Second)
 
     return ocCmd.Process, nil
 }
@@ -74,11 +75,9 @@ func connectToUnixServer(username string, password string) (connection *ssh.Clie
         HostKeyCallback: ssh.InsecureIgnoreHostKey(),
     }
 
-    log.Println("Username: " + username)
-    log.Println("Password: " + password)
-
     // Connect to a random random Unix server (attempt to load balance)
     // rand.Intn generates [0, 5), so use + 1 to make the range [1,5]
+    rand.Seed(time.Now().Unix())  // otherwise, always results in "unix2.csc.calpoly.edu:22"
     unixServer := fmt.Sprintf("unix%d.csc.calpoly.edu:22", rand.Intn(5) + 1)
 
     log.Println("Will be using the following UNIX server: " + unixServer)
@@ -103,21 +102,13 @@ func disconnectFromVPN(process *os.Process) (err error) {
     return process.Kill()
 }
 
-
 func main() {
     username, password, _ := getCredentials()
     vpnProcess, _ := connectToVPN(username, password)
-
-    c, _ := exec.Command("ip", "route", "get", "129.65.128.83").CombinedOutput()
-    fmt.Printf("%s\n", c)
-    c, _ = exec.Command("ip", "route", "get", "192.168.56.1").CombinedOutput()
-    fmt.Printf("%s\n", c)
-
     sshClient, _ := connectToUnixServer(username, password)
     // toUser, assignment, filesToHandin = processArguments()
     // syncFiles(username, filesToHandin)
     // doHandin(toUser, assignment, filesToHandin)
-    // cleanupRemoteFiles(sshClient, filesToHandin)
     _ = disconnectFromUnixServer(sshClient)
     _ = disconnectFromVPN(vpnProcess)
 }
