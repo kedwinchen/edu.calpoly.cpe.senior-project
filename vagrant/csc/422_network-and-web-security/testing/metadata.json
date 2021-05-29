@@ -1,0 +1,28 @@
+{
+    "name": "csc422/testing",
+    "description": "The box for testing",
+    "versions": [
+        {
+            "version": "20210315.0.1",
+            "providers": [
+                {
+                    "name": "virtualbox",
+                    "url": "https://vagrant-kedwin.chen.network/2021-spring/csc/422/testing/testing-amd64-virtualbox-20210315.0.1.box",
+                    "checksum_type": "sha512",
+                    "checksum": "880545db870960160a0e55abd479b62a61d73d74d871824bb49e5cc6cec116e8d598a9a958841e133ebb0153ca75b17388a0f3914afe5a902ef4f19d5d667638"
+                }
+            ]
+        },
+        {
+            "version": "20210314.0.1",
+            "providers": [
+                {
+                    "name": "virtualbox",
+                    "url": "https://vagrant-kedwin.chen.network/2021-spring/csc/422/testing/testing-amd64-virtualbox-20210314.0.1.box",
+                    "checksum_type": "sha512",
+                    "checksum": "201bfcf6427500100a802ce226e98c0fe20b745377dc928bb57d73c36452bce8d87a6bbddae7d0338bd160728b9eb8db7094f05341e0c352b40cec5c92b32b13"
+                }
+            ]
+        }
+    ]
+}

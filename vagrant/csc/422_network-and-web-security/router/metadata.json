@@ -1,0 +1,17 @@
+{
+    "name": "csc422/router",
+    "description": "The box for the 'router' VM",
+    "versions": [
+        {
+            "version": "20210315.0.1",
+            "providers": [
+                {
+                    "name": "virtualbox",
+                    "url": "https://vagrant-kedwin.chen.network/2021-spring/csc/422/router/router-amd64-virtualbox-20210315.0.1.box",
+                    "checksum_type": "sha512",
+                    "checksum": "457c7f09335bf9a2b12db91d4d764802f8cff5952c21e0f3729816e4c143ea9ae6b8acc6ceff7008a71b2c9ec51b6e522c9f482d1eaf6d513e98862ed6faddb1"
+                }
+            ]
+        }
+    ]
+}

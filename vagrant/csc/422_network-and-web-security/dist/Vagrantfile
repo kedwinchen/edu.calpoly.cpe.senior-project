@@ -1,0 +1,95 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# vagrant-kedwin.chen.network has a max download speed of ~5.1 MiB/s (on 300Mbps connection, limit is on hosting provider)
+baseurl = "https://vagrant-kedwin.chen.network"
+courseurl = "#{baseurl}/2021-spring/csc/422"
+# Vagrant Cloud is hosted in AWS S3, max download speed of ~33 MiB/s (on 300Mbps connection)
+
+ENV["VAGRANT_DEFAULT_PROVIDER"] = "virtualbox"
+
+Vagrant.configure("2") do |config|
+    # ----------------------- BEGIN GLOBAL CONFIGURATION -----------------------
+    # enable ssh X11 forwarding (for graphical applications)
+    config.ssh.forward_x11 = true
+    config.vm.provider "virtualbox" do |vbox|
+        # Enable "promiscuous mode" on "private network" (`hostonly`) adapters
+        vbox.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+        # uncomment to start the GUI on `vagrant up` (headless mode by default)
+        # vbox.gui = true
+        # Recommended memory is 2048 (2 GiB) per VM (comment out to use default value)
+        vbox.memory = 1024
+        # Recommended 2 cpu per VM (comment out to use default value)
+        vbox.cpus = 1
+    end
+
+    config.vm.provision "shell",
+        path: "#{courseurl}/configure_networking.sh",
+        sha512: "e1203ba407d37b70faad7f0c2ba5def55643f05fbb7b4402c542e3a6a8b837824012b2997fa0ead5696cd068ca20a1f8cb2978de846f8eb7ef37ce0d635bd7d1",
+        run: "always"
+    # ------------------------ END GLOBAL CONFIGURATION ------------------------
+
+    config.vm.define "router" do |router|
+        router.vm.box = "csc422/router"
+        router.vm.hostname = "router"
+        router.vm.box_url = "#{courseurl}/router/metadata.json"
+        router.vm.box_version = "20210315.0.1"
+
+        router.vm.network :private_network, ip: "192.168.22.101"
+    end
+
+    config.vm.define "testing" do |testing|
+        testing.vm.box = "csc422/testing"
+        testing.vm.hostname = "testing"
+        testing.vm.box_url = "#{courseurl}/testing/metadata.json"
+        testing.vm.box_version = "20210315.0.1"
+
+        testing.vm.network :private_network, ip: "192.168.22.102"
+        testing.vm.network :private_network, ip: "192.168.23.102"
+
+        # ----------------------- VM SPECIFIC OVERRIDES -----------------------
+        # Also enable promiscuous mode on the other NIC
+        testing.vm.provider "virtualbox" do |testing_vbox|
+            testing_vbox.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
+        end
+        # -------------------- END OF VM SPECIFIC OVERRIDES --------------------
+    end
+
+    config.vm.define "metasploitable" do |metasploitable|
+        metasploitable.vm.hostname = "metasploitable"
+        # Instead of building our own VM, use the latest version provided pre-built Rapid7
+        # metasploitable.vm.box = "metasploitable"
+        # metasploitable.vm.box_url = "#{courseurl}/metasploitable.box"
+        metasploitable.vm.box = "rapid7/metasploitable3-ub1404"
+        metasploitable.vm.box_version = "0.1.12-weekly"
+
+        metasploitable.vm.network :private_network, ip: "192.168.23.103"
+
+        # ----------------------- VM SPECIFIC OVERRIDES -----------------------
+        # Since the VM does not have the [correct] insecure Vagrant public key pre-installed,
+        # provide the password here in plain text. This is used ONLY for initial setup; since
+        # Vagrant will insert a new private key to use key-based authentication after first setup
+        metasploitable.ssh.username = "vagrant"
+        metasploitable.ssh.password = "vagrant"
+        metasploitable.ssh.insert_key = true
+        # disable shared folder on vulnerable VM (though make it read-only if mounted)
+        # however, this feature is not supported in the default rapid7/metasploitable3-ub1404
+        # VM since no VirtualBox Guest Additions are installed
+        metasploitable.vm.synced_folder ".", "/vagrant", mount_options: ["ro"], disabled: true
+
+        metasploitable.vm.provider "virtualbox" do |msf_vbox|
+            # Recommended memory is 4096 (4 GiB)
+            msf_vbox.memory = 2048
+        end
+        # -------------------- END OF VM SPECIFIC OVERRIDES --------------------
+    end
+
+    config.vm.define "client" do |client|
+        client.vm.hostname = "client"
+        client.vm.box = "kedwinchen/lubuntu-2004"
+        # Omitting a box_version always uses the latest version
+        # client.vm.box_version = "0.0.1"
+
+        client.vm.network :private_network, ip: "192.168.23.104"
+    end
+end

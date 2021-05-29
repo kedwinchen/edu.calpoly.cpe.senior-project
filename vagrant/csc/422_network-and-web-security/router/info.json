@@ -1,0 +1,7 @@
+{
+    "author": "Kedwin Chen",
+    "website": "https://cpslo-kedwin.chen.network/",
+    "artifacts": "https://vagrant-kedwin.chen.network/2021-spring/csc/422/router",
+    "repository": "https://gitlab.com/kedwinchen/edu.calpoly.senior-project/",
+    "description": "The 'router' box required for CSC 422 (Network and Web Security); Spring 2021"
+}

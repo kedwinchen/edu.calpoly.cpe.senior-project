@@ -1,0 +1,17 @@
+{
+    "name": "kedwinchen/lubuntu-2004",
+    "description": "The base box for lubuntu 20.04 LTS 64-bit (amd64/x86_64)",
+    "versions": [
+        {
+            "version": "0.0.1",
+            "providers": [
+                {
+                    "name": "virtualbox",
+                    "url": "https://cpslo-kedwin.chen.network/senior-project/files/base/lubuntu/20.04/lubuntu-20.04-amd64-virtualbox-v0.0.1.box",
+                    "checksum_type": "sha512",
+                    "checksum": "5fa96a28cc6ac9f35df24d8d34e5d3658a447349d62741b9f35437cfe0c2744fe99cf3c066e91928fe04b58a70f04e0ab85d4a8fca9376567d534f4ae5837fa0"
+                }
+            ]
+        }
+    ]
+}
