@@ -9,15 +9,30 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+
+	// consider using the following instead of using fmt.Sprintf()
+	// documentation at: https://golang.org/pkg/path/filepath/
+	// "path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
-	// "github.com/pkg/sftp"
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+
 	// TODO: replace with "golang.org/x/term"
 	"golang.org/x/crypto/ssh/terminal"
 )
+
+func processArguments(argv []string) (toUser string, assignment string, filesToHandin []string, err error) {
+	if !(len(argv) > 4) {
+		return "", "", nil, errors.New("not enough arguments provided")
+	}
+	toUser = argv[1]
+	assignment = argv[2]
+	filesToHandin = argv[3:]
+	return toUser, assignment, filesToHandin, nil
+}
 
 func getCredentials() (username string, password string, err error) {
 	reader := bufio.NewReader(os.Stdin)
@@ -94,21 +109,51 @@ func connectToUnixServer(username string, password string) (connection *ssh.Clie
 	return connection, nil
 }
 
-func processArguments(argv []string) (toUser string, assignment string, filesToHandin []string, err error) {
-	if !(len(argv) > 4) {
-		return "", "", nil, errors.New("not enough arguments provided")
+func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment string, filesToHandin []string) (syncDir string, err error) {
+	// create the SFTP client using the existing connection
+	sftpClient, err := sftp.NewClient(sshClient)
+	if err != nil {
+		log.Println("Errored in creating SFTP client")
+		return "", err
 	}
-	toUser = argv[1]
-	assignment = argv[2]
-	filesToHandin = argv[3:]
-	return toUser, assignment, filesToHandin, err
+
+	// create the directory to stage uploaded files for this session
+	syncDir = fmt.Sprintf("/home/%s/handin_syncDir/%s/%s/%d", username, toUser, assignment, time.Now().UnixNano())
+	err = sftpClient.MkdirAll(syncDir)
+	if err != nil {
+		log.Printf("Error while creating syncing directory (named '%s') on remote\n", syncDir)
+		return "", err
+	}
+	log.Printf("Using '%s' as the remote directory as destination to sync files", syncDir)
+
+	// sync the files
+	log.Printf("Starting file sync to '%s' on remote\n", syncDir)
+	for _, fileName := range filesToHandin {
+		var remoteFileName string = fmt.Sprintf("%s/%s", syncDir, fileName)
+		remoteFile, err := sftpClient.Create(remoteFileName)
+		if err != nil {
+			log.Printf("Error while creating remote fileName '%s' in directory '%s': %s\n", fileName, syncDir, err)
+		} else {
+			defer remoteFile.Close()
+			localFile, err := os.Open(fileName)
+			if err != nil {
+				log.Printf("Could not open the local fileName '%s'\n", fileName)
+			}
+			defer localFile.Close()
+			_, err = io.Copy(remoteFile, localFile)
+			if err != nil {
+				log.Printf("Error encountered while coping local file '%s' to '%s' on remote", fileName, remoteFileName)
+			}
+			remoteFile.Chmod(os.FileMode(os.O_RDONLY)) // set the remote file to read-only for archival reasons
+		}
+	}
+
+	log.Printf("Completed file sync to '%s' on remote\n", syncDir)
+	// errors while copying files are not fatal
+	return syncDir, nil
 }
 
-func syncFiles(username string, toUser string, assignment string, filesToHandin []string) (tmpDir string, err error) {
-	return "", errors.New("not implemented")
-}
-
-func doHandin(tmpDir string, toUser string, assignment string, filesToHandin []string) (err error) {
+func doHandin(sshClient *ssh.Client, syncDir string, toUser string, assignment string, filesToHandin []string) (err error) {
 	return errors.New("not implemented")
 }
 
@@ -123,6 +168,11 @@ func disconnectFromVPN(process *os.Process) (err error) {
 }
 
 func main() {
+	toUser, assignment, filesToHandin, err := processArguments(os.Args)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	username, password, err := getCredentials()
 	if err != nil {
 		log.Fatalln(err)
@@ -138,17 +188,12 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	toUser, assignment, filesToHandin, err := processArguments(os.Args)
+	syncDir, err := syncFiles(sshClient, username, toUser, assignment, filesToHandin)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	tmpDir, err := syncFiles(username, toUser, assignment, filesToHandin)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	err = doHandin(tmpDir, toUser, assignment, filesToHandin)
+	err = doHandin(sshClient, syncDir, toUser, assignment, filesToHandin)
 	if err != nil {
 		log.Fatalln(err)
 	}
