@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,14 +26,14 @@ func getCredentials() (username string, password string, err error) {
 	username, err = reader.ReadString('\n')
 	if nil != err {
 		log.Println("error while reading username")
-		log.Fatal(err)
+		return "", "", err
 	}
 
 	fmt.Print("Please enter your Cal Poly password: ")
 	passwordBytes, err := terminal.ReadPassword(int(syscall.Stdin))
 	if nil != err {
 		log.Println("error while reading password")
-		log.Fatal(err)
+		return "", "", err
 	}
 	password = string(passwordBytes)
 
@@ -47,7 +48,7 @@ func connectToVPN(username string, password string) (process *os.Process, err er
 	ocCmd := exec.Command("openconnect", "--protocol=gp", "cpvpn.calpoly.edu", "--user="+username, "--passwd-on-stdin")
 	ocCmdStdin, err := ocCmd.StdinPipe()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	go func() {
@@ -57,7 +58,7 @@ func connectToVPN(username string, password string) (process *os.Process, err er
 
 	err = ocCmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// TODO: determine how to use a variable here
@@ -85,12 +86,30 @@ func connectToUnixServer(username string, password string) (connection *ssh.Clie
 
 	connection, err = ssh.Dial("tcp", unixServer, clientConfig)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	log.Println("Connected to UNIX server: " + unixServer)
 
-	return connection, err
+	return connection, nil
+}
+
+func processArguments(argv []string) (toUser string, assignment string, filesToHandin []string, err error) {
+	if !(len(argv) > 4) {
+		return "", "", nil, errors.New("not enough arguments provided")
+	}
+	toUser = argv[1]
+	assignment = argv[2]
+	filesToHandin = argv[3:]
+	return toUser, assignment, filesToHandin, err
+}
+
+func syncFiles(username string, toUser string, assignment string, filesToHandin []string) (tmpDir string, err error) {
+	return "", errors.New("not implemented")
+}
+
+func doHandin(tmpDir string, toUser string, assignment string, filesToHandin []string) (err error) {
+	return errors.New("not implemented")
 }
 
 func disconnectFromUnixServer(client *ssh.Client) (err error) {
@@ -104,12 +123,43 @@ func disconnectFromVPN(process *os.Process) (err error) {
 }
 
 func main() {
-	username, password, _ := getCredentials()
-	vpnProcess, _ := connectToVPN(username, password)
-	sshClient, _ := connectToUnixServer(username, password)
-	// toUser, assignment, filesToHandin = processArguments()
-	// syncFiles(username, filesToHandin)
-	// doHandin(toUser, assignment, filesToHandin)
-	_ = disconnectFromUnixServer(sshClient)
-	_ = disconnectFromVPN(vpnProcess)
+	username, password, err := getCredentials()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	vpnProcess, err := connectToVPN(username, password)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	sshClient, err := connectToUnixServer(username, password)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	toUser, assignment, filesToHandin, err := processArguments(os.Args)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	tmpDir, err := syncFiles(username, toUser, assignment, filesToHandin)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = doHandin(tmpDir, toUser, assignment, filesToHandin)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = disconnectFromUnixServer(sshClient)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = disconnectFromVPN(vpnProcess)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
