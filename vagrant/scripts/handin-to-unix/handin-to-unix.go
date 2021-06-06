@@ -12,7 +12,7 @@ import (
 
 	// consider using the following instead of using fmt.Sprintf("%s/%s", basePath, fileName)
 	// documentation at: https://golang.org/pkg/path/filepath/
-	// "path/filepath"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -139,20 +139,33 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 	// sync the files ON
 	log.Printf("Starting file sync to '%s' on remote\n", syncDir)
 	for _, fileName := range filesToHandin {
-		var remoteFileName string = fmt.Sprintf("%s/%s", syncDir, fileName)
+
+		// TODO: make it so that '../' and all other paths are squashed
+		var remoteFileName string = filepath.Join(syncDir, fileName)
+		var remoteFileBase string = filepath.Dir(remoteFileName)
+
+		if err = sftpClient.MkdirAll(remoteFileBase); err != nil {
+			log.Printf("Error while creating sub-directory in syncDir (%s) for file: %s\n", syncDir, fileName)
+			continue
+		} else {
+			log.Printf("Created directory '%s' for file '%s'\n", remoteFileBase, fileName)
+		}
+
 		remoteFile, err := sftpClient.Create(remoteFileName)
 		if err != nil {
-			log.Printf("Error while creating remote fileName '%s' in directory '%s': %s\n", fileName, syncDir, err)
+			log.Printf("Error while creating remote file '%s' in directory '%s': %s\n", fileName, syncDir, err)
 		} else {
 			defer remoteFile.Close()
 			localFile, err := os.Open(fileName)
 			if err != nil {
-				log.Printf("Could not open the local fileName '%s'\n", fileName)
+				log.Printf("Could not open the local file: '%s'\n", fileName)
 			}
 			defer localFile.Close()
 			_, err = io.Copy(remoteFile, localFile)
 			if err != nil {
-				log.Printf("Error encountered while coping local file '%s' to '%s' on remote", fileName, remoteFileName)
+				log.Printf("Error encountered while coping local file '%s' to '%s' on remote: %s\n", fileName, remoteFileName, err)
+			} else {
+				log.Printf("OK: '%s' (local) -> '%s' (remote)\n", fileName, remoteFileName)
 			}
 			remoteFile.Chmod(os.FileMode(os.O_RDONLY)) // set the remote file to read-only for archival reasons
 		}
