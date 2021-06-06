@@ -32,7 +32,7 @@ func usage(name string) {
 }
 
 func processArguments(argv []string) (toUser string, assignment string, filesToHandin []string, err error) {
-	if !(len(argv) > 4) {
+	if !(len(argv) >= 4) {
 		usage(argv[0])
 		return "", "", nil, errors.New("not enough arguments provided")
 	}
