@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/exec"
 
-	// consider using the following instead of using fmt.Sprintf()
+	// consider using the following instead of using fmt.Sprintf("%s/%s", basePath, fileName)
 	// documentation at: https://golang.org/pkg/path/filepath/
 	// "path/filepath"
 	"strings"
@@ -68,6 +68,7 @@ func getCredentials() (username string, password string, err error) {
 func connectToVPN(username string, password string) (process *os.Process, err error) {
 	log.Println("Connecting to VPN as user '" + username + "'")
 
+	// NOTE: THIS WILL BREAK if MFA becomes required for VPN login using this method
 	ocCmd := exec.Command("openconnect", "--protocol=gp", "cpvpn.calpoly.edu", "--user="+username, "--passwd-on-stdin")
 	ocCmdStdin, err := ocCmd.StdinPipe()
 	if err != nil {
@@ -97,6 +98,7 @@ func connectToUnixServer(username string, password string) (connection *ssh.Clie
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
+		// TODO: investigate if host key pinning is viable
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -134,7 +136,7 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 	}
 	log.Printf("Using '%s' as the remote directory as destination to sync files", syncDir)
 
-	// sync the files
+	// sync the files ON
 	log.Printf("Starting file sync to '%s' on remote\n", syncDir)
 	for _, fileName := range filesToHandin {
 		var remoteFileName string = fmt.Sprintf("%s/%s", syncDir, fileName)
@@ -219,22 +221,28 @@ func main() {
 
 	sshClient, err := connectToUnixServer(username, password)
 	if err != nil {
-		log.Fatalln(err)
-	}
+		// do not be Fatal, still need to clean up!
+		log.Println(err)
+	} else {
+		// only start syncing if successfully connected to the UNIX server
+		syncDir, err := syncFiles(sshClient, username, toUser, assignment, filesToHandin)
+		if err != nil {
+			// do not be Fatal, still need to handin clean up!
+			log.Println(err)
+		}
 
-	syncDir, err := syncFiles(sshClient, username, toUser, assignment, filesToHandin)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	err = doHandin(sshClient, syncDir, toUser, assignment, filesToHandin)
-	if err != nil {
-		log.Fatalln(err)
+		// do handin, even if had issues during sync (hand in what we can)
+		err = doHandin(sshClient, syncDir, toUser, assignment, filesToHandin)
+		if err != nil {
+			// do not be Fatal, still need to clean up!
+			log.Println(err)
+		}
 	}
 
 	err = disconnectFromUnixServer(sshClient)
 	if err != nil {
-		log.Fatalln(err)
+		// do not be Fatal, still need to clean up!
+		log.Println(err)
 	}
 
 	err = disconnectFromVPN(vpnProcess)
