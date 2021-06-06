@@ -24,8 +24,16 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+func usage(name string) {
+	fmt.Printf("%s touser [ subdirectory [ files ... ] ]\n", name)
+	fmt.Println("\t touser: the user to hand the files to")
+	fmt.Println("\t subdirectory: usually this is the name of the assignment")
+	fmt.Println("\t files: a space-separated list of files to hand in (at least one required)")
+}
+
 func processArguments(argv []string) (toUser string, assignment string, filesToHandin []string, err error) {
 	if !(len(argv) > 4) {
+		usage(argv[0])
 		return "", "", nil, errors.New("not enough arguments provided")
 	}
 	toUser = argv[1]
@@ -148,13 +156,39 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 		}
 	}
 
+	err = sftpClient.Close()
+	if err != nil {
+		log.Printf("Error while closing SFTP session: %s\n", err)
+	}
+
 	log.Printf("Completed file sync to '%s' on remote\n", syncDir)
 	// errors while copying files are not fatal
 	return syncDir, nil
 }
 
 func doHandin(sshClient *ssh.Client, syncDir string, toUser string, assignment string, filesToHandin []string) (err error) {
-	return errors.New("not implemented")
+	// prepare handin argv
+	var handinCmdStr string = fmt.Sprintf("handin '%s' '%s'", toUser, assignment)
+	for _, fileName := range filesToHandin {
+		handinCmdStr += fmt.Sprintf(" '%s/%s'", syncDir, fileName)
+	}
+
+	// prepare the session
+	cmdSession, err := sshClient.NewSession()
+	if err != nil {
+		log.Println("Error while creating new SSH command session (to perform actual `handin` operation)")
+		return err
+	}
+
+	// do the actual handin
+	log.Printf("Running the command: \n\n%s\n\n", handinCmdStr)
+	cmdOutput, err := cmdSession.Output(handinCmdStr)
+	if err != nil {
+		log.Printf("Error while running the command above: %s", err)
+		return err
+	}
+	log.Printf("Output from the command:\n\n%s\n\n", string(cmdOutput))
+	return nil
 }
 
 func disconnectFromUnixServer(client *ssh.Client) (err error) {
