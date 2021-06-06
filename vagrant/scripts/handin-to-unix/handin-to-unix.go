@@ -136,27 +136,23 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 	}
 	log.Printf("Using '%s' as the remote directory as destination to sync files", syncDir)
 
-	// sync the files ON
+	// sync the files
 	log.Printf("Starting file sync to '%s' on remote\n", syncDir)
-	for _, fileName := range filesToHandin {
+	for idx, fileName := range filesToHandin {
 
-		// TODO: make it so that '../' and all other paths are squashed
-		var remoteFileName string = filepath.Join(syncDir, fileName)
-		var remoteFileBase string = filepath.Dir(remoteFileName)
-
-		if err = sftpClient.MkdirAll(remoteFileBase); err != nil {
-			log.Printf("Error while creating sub-directory in syncDir (%s) for file: %s\n", syncDir, fileName)
-			continue
-		} else {
-			log.Printf("Created directory '%s' for file '%s'\n", remoteFileBase, fileName)
+		// Squash subdirectories
+		var remoteFileName string = filepath.Base(fileName)
+		if remoteFileName != fileName {
+			filesToHandin[idx] = remoteFileName
 		}
+		remoteFileName = filepath.Join(syncDir, remoteFileName)
 
 		remoteFile, err := sftpClient.Create(remoteFileName)
 		if err != nil {
 			log.Printf("Error while creating remote file '%s' in directory '%s': %s\n", fileName, syncDir, err)
 		} else {
 			defer remoteFile.Close()
-			localFile, err := os.Open(fileName)
+			localFile, err := os.Open(fileName) // TODO: ensure that the file is a regular file (probably should do this before creating on remote)
 			if err != nil {
 				log.Printf("Could not open the local file: '%s'\n", fileName)
 			}
@@ -167,7 +163,7 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 			} else {
 				log.Printf("OK: '%s' (local) -> '%s' (remote)\n", fileName, remoteFileName)
 			}
-			remoteFile.Chmod(os.FileMode(os.O_RDONLY)) // set the remote file to read-only for archival reasons
+			remoteFile.Chmod(os.FileMode(0400)) // set the remote file to read-only for archival reasons
 		}
 	}
 
