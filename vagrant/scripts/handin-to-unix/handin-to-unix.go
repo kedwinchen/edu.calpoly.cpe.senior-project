@@ -24,22 +24,49 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func usage(name string) {
-	fmt.Printf("%s touser [ subdirectory [ files ... ] ]\n", name)
-	fmt.Println("\t touser: the user to hand the files to")
-	fmt.Println("\t subdirectory: usually this is the name of the assignment")
-	fmt.Println("\t files: a space-separated list of files to hand in (at least one required)")
+type HandinInfo struct {
+	toUser        string
+	subDirectory  string
+	filesToHandin []string
 }
 
-func processArguments(argv []string) (toUser string, assignment string, filesToHandin []string, err error) {
-	if !(len(argv) >= 4) {
+func usage(name string) {
+	fmt.Printf("%s touser [ subdirectory [ files ... ] ]\n", name)
+	fmt.Println("\t (required) touser: the user to hand the files to")
+	fmt.Println("\t (optional) subdirectory: usually this is the name of the assignment.")
+	fmt.Println("\t\t if omitted, provides a list of available subdirectories")
+	fmt.Println("\t (optional) files: a space-separated list of files to hand in (optional)")
+	fmt.Println("\t\t if omitted, provides a list of files already submitted")
+	fmt.Println("\t\t this option is only meaningful if a `subdirectory` is specified")
+}
+
+func processArguments(argv []string, info *HandinInfo) (err error) {
+	var argc int = len(argv)
+	if argc < 2 {
 		usage(argv[0])
-		return "", "", nil, errors.New("not enough arguments provided")
+		return errors.New("not enough arguments provided")
 	}
-	toUser = argv[1]
-	assignment = argv[2]
-	filesToHandin = argv[3:]
-	return toUser, assignment, filesToHandin, nil
+
+	info.toUser = argv[1] // always set this (required)
+
+	if argc >= 3 {
+		info.subDirectory = argv[2]
+		log.Printf("Using subdirectory '%s' for user '%s'\n", info.subDirectory, info.toUser)
+	} else {
+		info.subDirectory = ""
+		log.Printf("Listing available subdirectories for user '%s'\n", info.toUser)
+	}
+
+	if argc >= 4 {
+		info.filesToHandin = argv[3:]
+		log.Printf("Will attempt to hand in the following files: \n'%s'\n", strings.Join(info.filesToHandin, "'\n'"))
+	} else {
+		// outside of the previous if/else statement because filesToHandin
+		// needs to be set to nil if argc is equal to 3
+		info.filesToHandin = nil
+		log.Printf("Listing files already handed in to user '%s' for '%s' (Not handing in any new files)\n", info.toUser, info.subDirectory)
+	}
+	return nil
 }
 
 func getCredentials() (username string, password string, err error) {
@@ -119,7 +146,13 @@ func connectToUnixServer(username string, password string) (connection *ssh.Clie
 	return connection, nil
 }
 
-func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment string, filesToHandin []string) (syncDir string, err error) {
+func syncFiles(sshClient *ssh.Client, username string, info *HandinInfo) (syncDir string, err error) {
+
+	if info.filesToHandin == nil {
+		log.Println("Skipping file syncing (no files appear to have been provided)")
+		return "", nil
+	}
+
 	// create the SFTP client using the existing connection
 	sftpClient, err := sftp.NewClient(sshClient)
 	if err != nil {
@@ -128,7 +161,7 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 	}
 
 	// create the directory to stage uploaded files for this session
-	syncDir = fmt.Sprintf("/home/%s/handin_syncDir/%s/%s/%d", username, toUser, assignment, time.Now().UnixNano())
+	syncDir = fmt.Sprintf("/home/%s/handin_syncDir/%s/%s/%d", username, info.toUser, info.subDirectory, time.Now().UnixNano())
 	err = sftpClient.MkdirAll(syncDir)
 	if err != nil {
 		log.Printf("Error while creating syncing directory (named '%s') on remote\n", syncDir)
@@ -138,12 +171,12 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 
 	// sync the files
 	log.Printf("Starting file sync to '%s' on remote\n", syncDir)
-	for idx, fileName := range filesToHandin {
+	for idx, fileName := range info.filesToHandin {
 
 		// Squash subdirectories
 		var remoteFileName string = filepath.Base(fileName)
 		if remoteFileName != fileName {
-			filesToHandin[idx] = remoteFileName
+			info.filesToHandin[idx] = remoteFileName
 		}
 		remoteFileName = filepath.Join(syncDir, remoteFileName)
 
@@ -177,11 +210,18 @@ func syncFiles(sshClient *ssh.Client, username string, toUser string, assignment
 	return syncDir, nil
 }
 
-func doHandin(sshClient *ssh.Client, syncDir string, toUser string, assignment string, filesToHandin []string) (err error) {
+func doHandin(sshClient *ssh.Client, syncDir string, info *HandinInfo) (err error) {
 	// prepare handin argv
-	var handinCmdStr string = fmt.Sprintf("handin '%s' '%s'", toUser, assignment)
-	for _, fileName := range filesToHandin {
-		handinCmdStr += fmt.Sprintf(" '%s/%s'", syncDir, fileName)
+	var handinCmdStr string = fmt.Sprintf("handin '%s'", info.toUser)
+
+	if len(info.subDirectory) > 0 {
+		handinCmdStr += fmt.Sprintf(" '%s'", info.subDirectory)
+	}
+
+	if info.filesToHandin != nil {
+		for _, fileName := range info.filesToHandin {
+			handinCmdStr += fmt.Sprintf(" '%s/%s'", syncDir, fileName)
+		}
 	}
 
 	// prepare the session
@@ -213,8 +253,9 @@ func disconnectFromVPN(process *os.Process) (err error) {
 }
 
 func main() {
-	toUser, assignment, filesToHandin, err := processArguments(os.Args)
-	if err != nil {
+	var info HandinInfo
+
+	if err := processArguments(os.Args, &info); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -234,14 +275,14 @@ func main() {
 		log.Println(err)
 	} else {
 		// only start syncing if successfully connected to the UNIX server
-		syncDir, err := syncFiles(sshClient, username, toUser, assignment, filesToHandin)
+		syncDir, err := syncFiles(sshClient, username, &info)
 		if err != nil {
 			// do not be Fatal, still need to handin clean up!
 			log.Println(err)
 		}
 
 		// do handin, even if had issues during sync (hand in what we can)
-		err = doHandin(sshClient, syncDir, toUser, assignment, filesToHandin)
+		err = doHandin(sshClient, syncDir, &info)
 		if err != nil {
 			// do not be Fatal, still need to clean up!
 			log.Println(err)
