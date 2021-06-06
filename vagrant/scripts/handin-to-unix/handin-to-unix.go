@@ -193,7 +193,7 @@ func doHandin(sshClient *ssh.Client, syncDir string, toUser string, assignment s
 
 	// do the actual handin
 	log.Printf("Running the command: \n\n%s\n\n", handinCmdStr)
-	cmdOutput, err := cmdSession.Output(handinCmdStr)
+	cmdOutput, err := cmdSession.CombinedOutput(handinCmdStr)
 	if err != nil {
 		log.Printf("Error while running the command above: %s", err)
 		return err
