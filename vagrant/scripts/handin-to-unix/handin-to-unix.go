@@ -52,20 +52,20 @@ func processArguments(argv []string, info *HandinInfo) (err error) {
 	if argc >= 3 {
 		info.subDirectory = argv[2]
 		log.Printf("Using subdirectory '%s' for user '%s'\n", info.subDirectory, info.toUser)
+
+		if argc >= 4 {
+			info.filesToHandin = argv[3:]
+			log.Printf("Will attempt to hand in the following files: \n'%s'\n", strings.Join(info.filesToHandin, "'\n'"))
+		} else {
+			info.filesToHandin = nil
+			log.Printf("Listing files already handed in to subdirectory '%s' for user '%s' (Not handing in any new files)\n", info.subDirectory, info.toUser)
+		}
 	} else {
 		info.subDirectory = ""
+		info.filesToHandin = nil
 		log.Printf("Listing available subdirectories for user '%s'\n", info.toUser)
 	}
 
-	if argc >= 4 {
-		info.filesToHandin = argv[3:]
-		log.Printf("Will attempt to hand in the following files: \n'%s'\n", strings.Join(info.filesToHandin, "'\n'"))
-	} else {
-		// outside of the previous if/else statement because filesToHandin
-		// needs to be set to nil if argc is equal to 3
-		info.filesToHandin = nil
-		log.Printf("Listing files already handed in to user '%s' for '%s' (Not handing in any new files)\n", info.toUser, info.subDirectory)
-	}
 	return nil
 }
 
