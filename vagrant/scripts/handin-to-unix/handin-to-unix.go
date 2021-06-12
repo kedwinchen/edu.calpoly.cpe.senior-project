@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"os/user"
 
 	// consider using the following instead of using fmt.Sprintf("%s/%s", basePath, fileName)
 	// documentation at: https://golang.org/pkg/path/filepath/
@@ -19,6 +20,7 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/sys/unix"
 
 	// TODO: replace with "golang.org/x/term"
 	"golang.org/x/crypto/ssh/terminal"
@@ -38,6 +40,35 @@ func usage(name string) {
 	fmt.Println("\t (optional) files: a space-separated list of files to hand in (optional)")
 	fmt.Println("\t\t if omitted, provides a list of files already submitted")
 	fmt.Println("\t\t this option is only meaningful if a `subdirectory` is specified")
+}
+
+func checkPrivs() (err error) {
+	current, err := user.Current()
+	if err != nil {
+		return err
+	}
+	log.Printf("Currently running as user '%s' with UID '%s' as GID '%s'\n", current.Username, current.Uid, current.Gid)
+	log.Printf("Current EUID: %d\n", unix.Geteuid())
+
+	if current.Username != "root" {
+		log.Println("\n\n----- WARNING -----\n\n" +
+			"If you are not running this command as 'root' (or with 'sudo'), connecting to the UNIX server will time out.\n" +
+			"This may be fixed in a future build.\n" +
+			"Note: this is only an issue for this `handin' wrapper, and does not affect `handin' on the UNIX servers.\n\n")
+	}
+
+	// TODO: fix this; always returns "Operation unsupported"
+	// if err = unix.Setuid(0); err != nil {
+	// 	log.Println("Failed to setuid 0 (try to run with sudo instead)")
+	// 	return err
+	// }
+
+	// if err = unix.Setgid(0); err != nil {
+	// 	log.Println("Failed to setgid 0 (try to run with sudo instead)")
+	// 	return err
+	// }
+
+	return nil
 }
 
 func processArguments(argv []string, info *HandinInfo) (err error) {
@@ -236,10 +267,9 @@ func doHandin(sshClient *ssh.Client, syncDir string, info *HandinInfo) (err erro
 	cmdOutput, err := cmdSession.CombinedOutput(handinCmdStr)
 	if err != nil {
 		log.Printf("Error while running the command above: %s", err)
-		return err
 	}
 	log.Printf("Output from the command:\n\n%s\n\n", string(cmdOutput))
-	return nil
+	return err
 }
 
 func disconnectFromUnixServer(client *ssh.Client) (err error) {
@@ -254,6 +284,10 @@ func disconnectFromVPN(process *os.Process) (err error) {
 
 func main() {
 	var info HandinInfo
+
+	if err := checkPrivs(); err != nil {
+		log.Fatalln(err)
+	}
 
 	if err := processArguments(os.Args, &info); err != nil {
 		log.Fatalln(err)
