@@ -285,10 +285,8 @@ PACKAGES_AUTOJUMP=(
 set -u
 set +e  # allow for non-zero exit on package installation
 
-yum check-update
-yum install -y @gnome-desktop
-yum erase -y PackageKit postfix
 yum upgrade -y
+yum install -y @gnome-desktop @x11 @internet-browser
 yum install -y "${PACKAGES_EPEL[@]}"
 yum install -y "${PACKAGES_SSSD[@]}"
 yum install -y "${PACKAGES_NFS[@]}"
@@ -305,6 +303,7 @@ yum install -y "${PACKAGES_GSL[@]}"
 yum install -y "${PACKAGES_GNUPLOT[@]}"
 yum install -y "${PACKAGES_DEVELOPMENT[@]}"
 yum install -y "${PACKAGES_AUTOJUMP[@]}"
+yum erase -y "${PACKAGES_TO_REMOVE[@]}"
 
 yum install -y openconnect
 
@@ -312,9 +311,9 @@ cd /bin
 wget https://gitlab.com/kedwinchen/edu.calpoly.cpe.senior-project/-/raw/latest-release/vagrant/scripts/handin-to-unix/handin
 chown root:root handin
 chmod 6555 handin
-chcon system_u:object_r:bin_t handin
+chcon system_u:object_r:bin_t /bin/handin
 
-# disable SELinux
+# disable SELinux (yeah yeah it's not secure, but it's also disabled on the UNIX servers so... this is to match it)
 sed -i 's/^SELINUX=.*$/SELINUX=disabled/g' /etc/selinux/config
 
 # remove cached packages
@@ -323,5 +322,9 @@ yum clean all
 # clean up logs
 find /var/log -type f -exec truncate -s 0 {} \;
 # rm -rvf /var/log/*
+
+# set to boot to graphical desktop
+systemctl enable gdm.service
+systemctl set-default graphical.target
 
 set +u
